@@ -97,8 +97,8 @@ dependencies = [
 
 [[package]]
 name = "sigma-types"
-version = "0.2.7"
-source = "git+https://github.com/wrsturgeon/sigma-types.git#7490aa7e1c6793c9b84998c398fe2b08515b69a7"
+version = "0.2.8"
+source = "git+https://github.com/wrsturgeon/sigma-types.git#8e1b5b43c5954e0ed498cff8737ef8062fd21b09"
 dependencies = [
  "quickcheck",
 ]

@@ -43,7 +43,7 @@ pub fn Ei(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
         reason = "property-based testing ensures this never happens"
     )]
 
-    E1(x).map(|Approx { error, value }| Approx {
+    E1(-x).map(|Approx { error, value }| Approx {
         error,
         value: -value,
     })

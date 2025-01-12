@@ -7,7 +7,7 @@
 #![no_std]
 #![expect(non_snake_case, reason = "Proper mathematical names")]
 
-mod chebyshev;
+pub mod chebyshev;
 mod constants;
 mod implementation;
 
@@ -37,6 +37,17 @@ pub struct Approx {
     pub error: NonNegative<Finite<f64>>,
     /// Approximate value.
     pub value: Finite<f64>,
+}
+
+impl fmt::Display for Approx {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            ref error,
+            ref value,
+        } = *self;
+        write!(f, "{value} +/- {error}")
+    }
 }
 
 /// An approximate value alongside an estimate of its own approximation error.

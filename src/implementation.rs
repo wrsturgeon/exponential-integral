@@ -3,11 +3,14 @@
 /// Specialized approximations to be used on disjoint intervals of the domain,
 /// instead of a one-size-fits-all approach.
 pub(crate) mod piecewise {
-    #![expect(clippy::single_call_fn, reason = "disjoint, so that's kinda the point")]
+    #![cfg_attr(
+        not(test),
+        expect(clippy::single_call_fn, reason = "disjoint, so that's kinda the point")
+    )]
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{Finite, NonNegative, NonZero, One},
+        sigma_types::{Finite, NonNegative, NonZero, One, Sorted, less_than::usize::LessThan},
     };
 
     /// Between the minimum input and -10.
@@ -22,7 +25,7 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn lt_10(x: NonZero<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_10(x: NonZero<Finite<f64>>) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -30,32 +33,67 @@ pub(crate) mod piecewise {
 
         let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
 
-        let ae11 = chebyshev::Series {
-            a: Finite::new(-1_f64),
-            b: Finite::new(1_f64),
-            coefficients: &constants::AE11,
-            order: 38,
-            // order_sp: 20,
-        };
-        let Approx {
-            value: cheb,
-            error: _,
-        } = ae11.eval((Finite::new(20_f64) / *x) + One::ONE);
+        let cheb = chebyshev::eval(
+            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Finite::all(&constants::AE11),
+            LessThan::new(38),
+            (Finite::new(20_f64) / *x) + One::ONE,
+        );
 
-        let value = s * (Finite::ONE + cheb);
+        let value = s * (Finite::ONE + cheb.value);
         let abs_x: NonNegative<Finite<f64>> = x.map(|f| f.map(f64::abs));
         let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
         let two = NonNegative::new(Finite::new(2_f64));
+        let addl_error = two * epsilon * (abs_x + One::ONE) * abs_value;
         Approx {
             value,
-            error: two * epsilon * (abs_x + One::ONE) * abs_value,
+            error: NonNegative::new(s * cheb.error.get() + addl_error.get()),
+        }
+    }
+
+    /// Between -10 and -4.
+    /// # Original C code
+    /// ```c
+    /// const double s = 1.0/x * ( 0 ? 1.0 : exp(-x) );
+    /// gsl_sf_result result_c;
+    /// cheb_eval_e(&AE12_cs, (40.0/x+7.0)/3.0, &result_c);
+    /// result->val  = s * (1.0 + result_c.val);
+    /// result->err  = s * result_c.err;
+    /// result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
+    /// return GSL_SUCCESS;
+    /// ```
+    #[inline]
+    pub(crate) fn le_neg_4(x: NonZero<Finite<f64>>) -> Approx {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
+
+        let cheb = chebyshev::eval(
+            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Finite::all(&constants::AE12),
+            LessThan::new(24),
+            ((Finite::new(40_f64) / *x) + Finite::new(7_f64)) / Finite::new(3_f64),
+        );
+
+        let value = s * (Finite::ONE + cheb.value);
+        let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        let two = NonNegative::new(Finite::new(2_f64));
+        let addl_error = two * epsilon * abs_value;
+        Approx {
+            value,
+            error: NonNegative::new(s * cheb.error.get() + addl_error.get()),
         }
     }
 }
 
 use {
     crate::{Approx, Error, constants},
+    core::{cmp::Ordering, hint::unreachable_unchecked},
     sigma_types::{Finite, NonZero},
 };
 
@@ -146,12 +184,45 @@ use {
 /// See `Error`.
 #[inline]
 #[expect(clippy::todo, reason = "TODO: REMOVE")]
-#[expect(clippy::single_call_fn, reason = "to mirror the C implementation")]
+#[cfg_attr(
+    not(test),
+    expect(clippy::single_call_fn, reason = "to mirror the C implementation")
+)]
 pub(crate) fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
-    match **x {
-        ..constants::NXMAX => Err(Error::ArgumentTooNegative(x.get().get())),
-        ..-10. => Ok(piecewise::lt_10(x)),
-        _ => todo!(),
+    match (**x).partial_cmp(&0_f64) {
+        // (-\infty, 0)
+        Some(Ordering::Less) => match (**x).partial_cmp(&-10_f64) {
+            // (-\infty, -10]
+            Some(Ordering::Less | Ordering::Equal) => match (**x).partial_cmp(&constants::NXMAX) {
+                // (-XMAX, -10]
+                Some(Ordering::Greater) => Ok(piecewise::le_neg_10(x)),
+                // (-\infty, -XMAX]
+                Some(Ordering::Less | Ordering::Equal) => {
+                    Err(Error::ArgumentTooNegative(x.get().get()))
+                }
+                // SAFETY:
+                // absurd case, since `x` is finite
+                None => unsafe { unreachable_unchecked() },
+            },
+            // (-10, 0)
+            Some(Ordering::Greater) => match (**x).partial_cmp(&-4_f64) {
+                // (-10, -4]
+                Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_neg_4(x)),
+                // (-4, 0)
+                Some(Ordering::Greater) => todo!(),
+                // SAFETY:
+                // absurd case, since `x` is finite
+                None => unsafe { unreachable_unchecked() },
+            },
+            // SAFETY:
+            // absurd case, since `x` is finite
+            None => unsafe { unreachable_unchecked() },
+        },
+        // (0, +\infty)
+        Some(Ordering::Greater) => todo!(),
+        // SAFETY:
+        // absurd case, since `x` is finite and nonzero
+        Some(Ordering::Equal) | None => unsafe { unreachable_unchecked() },
     }
 
     /*
