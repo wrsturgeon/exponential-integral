@@ -1,4 +1,4 @@
-//! The exponential integral, often written Ei,
+//! The exponential integral, often written $\text{Ei}$,
 //! equal to the the integral of an exponentiated input over the input itself:
 //! $\text{Ei}(t) = \int_{-\infty}^{t} \frac{ e^{u} }{ u } \text{d}u$
 //!
