@@ -31,7 +31,7 @@ fn in_range<T: Arbitrary + PartialOrd>(lo: &T, hi: &T, g: &mut Gen) -> T {
 
 fn main() {
     let x = in_range(
-        &NonZero::new(Finite::new(4_f64)),
+        &NonZero::new(Finite::new(1_f64)),
         &NonZero::new(Finite::new(16_f64)),
         &mut Gen::new(256),
     );

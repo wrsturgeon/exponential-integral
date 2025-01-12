@@ -89,6 +89,47 @@ pub(crate) mod piecewise {
             error: NonNegative::new(s * cheb.error.get() + addl_error.get()),
         }
     }
+
+    /// Between -4 and -1.
+    /// # Original C code
+    /// ```c
+    /// const double ln_term = -log(fabs(x));
+    /// gsl_sf_result result_c;
+    /// cheb_eval_e(&E11_cs, (2.0*x+5.0)/3.0, &result_c);
+    /// result->val  = (ln_term + result_c.val);
+    /// result->err  = (result_c.err + GSL_DBL_EPSILON * fabs(ln_term));
+    /// result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
+    /// return GSL_SUCCESS;
+    /// ```
+    #[inline]
+    pub(crate) fn le_neg_1(x: NonZero<Finite<f64>>) -> Approx {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        let abs = Finite::new(x.abs());
+        let ln = Finite::new(abs.ln());
+
+        let cheb = chebyshev::eval(
+            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Finite::all(&constants::E11),
+            LessThan::new(18),
+            ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
+        );
+
+        let value = ln + cheb.value;
+        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        let init_err = cheb.error + epsilon * NonNegative::new(Finite::new(ln.abs()));
+        let addl_err = NonNegative::new(Finite::new(2_f64))
+            * epsilon
+            * NonNegative::new(Finite::new(value.abs()));
+
+        Approx {
+            value,
+            error: init_err + addl_err,
+        }
+    }
 }
 
 use {
@@ -209,7 +250,15 @@ pub(crate) fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
                 // (-10, -4]
                 Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_neg_4(x)),
                 // (-4, 0)
-                Some(Ordering::Greater) => todo!(),
+                Some(Ordering::Greater) => match (**x).partial_cmp(&-1_f64) {
+                    // (-4, -1]
+                    Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_neg_1(x)),
+                    // (-1, 0)
+                    Some(Ordering::Greater) => todo!(),
+                    // SAFETY:
+                    // absurd case, since `x` is finite
+                    None => unsafe { unreachable_unchecked() },
+                },
                 // SAFETY:
                 // absurd case, since `x` is finite
                 None => unsafe { unreachable_unchecked() },
@@ -226,15 +275,6 @@ pub(crate) fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
     }
 
     /*
-    else if(x <= -4.0) {
-      const double s = 1.0/x * ( 0 ? 1.0 : exp(-x) );
-      gsl_sf_result result_c;
-      cheb_eval_e(&AE12_cs, (40.0/x+7.0)/3.0, &result_c);
-      result->val  = s * (1.0 + result_c.val);
-      result->err  = s * result_c.err;
-      result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
-      return GSL_SUCCESS;
-    }
     else if(x <= -1.0) {
       const double ln_term = -log(fabs(x));
       const double scale_factor = ( 0 ? exp(x) : 1.0 );
