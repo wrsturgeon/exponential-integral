@@ -21,6 +21,7 @@ use {
     sigma_types::{Finite, NonNegative, NonZero},
 };
 
+// TODO: add a `with-error` feature and, when that's off, reduce this to `f64`
 /// An approximate value alongside an estimate of its own approximation error.
 /// # Original C code
 /// ```c

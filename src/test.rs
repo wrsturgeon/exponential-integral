@@ -48,6 +48,18 @@ mod doesnt_crash {
                 _ = le_neg_1(x);
                 TestResult::passed()
             }
+
+            #[quickcheck]
+            fn pos_1(x: NonZero<Finite<f64>>) -> TestResult {
+                if **x <= -1_f64 {
+                    return TestResult::discard();
+                }
+                if **x > 1_f64 {
+                    return TestResult::discard();
+                }
+                _ = le_pos_1(x);
+                TestResult::passed()
+            }
         }
 
         use {

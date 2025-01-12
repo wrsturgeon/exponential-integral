@@ -5,36 +5,34 @@
     reason = "examples won't necessarily use each dev-dependency"
 )]
 #![expect(clippy::print_stdout, reason = "executable, not a library")]
+#![expect(
+    clippy::as_conversions,
+    clippy::cast_precision_loss,
+    reason = "not worth sacrificing clarity to eliminate a one-in-a-million scenario for a one-off example"
+)]
 
 use {
-    core::cmp::Ordering,
     exponential_integral::with_error::Ei,
-    quickcheck::{Arbitrary, Gen},
+    quickcheck::{Arbitrary as _, Gen},
     sigma_types::{Finite, NonZero},
 };
 
 /// Generate a value within a range, not inclusive.
 #[inline]
 #[expect(clippy::single_call_fn, reason = "`loop` and `return` semantics")]
-fn in_range<T: Arbitrary + PartialOrd>(lo: &T, hi: &T, g: &mut Gen) -> T {
+fn in_range(lo: f64, hi: f64, g: &mut Gen) -> NonZero<Finite<f64>> {
     loop {
-        let t = T::arbitrary(g);
-        let Some(Ordering::Greater) = t.partial_cmp(lo) else {
-            continue;
-        };
-        let Some(Ordering::Less) = t.partial_cmp(hi) else {
-            continue;
-        };
-        return t;
+        let u = usize::arbitrary(g);
+        let on_unit = (u as f64) / (usize::MAX as f64);
+        let f = on_unit.mul_add(hi - lo, lo);
+        if let Some(checked) = Finite::try_new(f).and_then(NonZero::try_new) {
+            return checked;
+        }
     }
 }
 
 fn main() {
-    let x = in_range(
-        &NonZero::new(Finite::new(1_f64)),
-        &NonZero::new(Finite::new(16_f64)),
-        &mut Gen::new(256),
-    );
+    let x = in_range(-1_f64, 1_f64, &mut Gen::new(256));
     println!("x = {x}");
     let ei = Ei(x);
     match ei {
