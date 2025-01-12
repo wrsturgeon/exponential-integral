@@ -13,6 +13,47 @@ pub(crate) mod piecewise {
         sigma_types::{Finite, NonNegative, NonZero, One, Sorted, less_than::usize::LessThan},
     };
 
+    /// Between -4 and -1.
+    /// # Original C code
+    /// ```c
+    /// const double ln_term = -log(fabs(x));
+    /// gsl_sf_result result_c;
+    /// cheb_eval_e(&E11_cs, (2.0*x+5.0)/3.0, &result_c);
+    /// result->val  = (ln_term + result_c.val);
+    /// result->err  = (result_c.err + GSL_DBL_EPSILON * fabs(ln_term));
+    /// result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
+    /// return GSL_SUCCESS;
+    /// ```
+    #[inline]
+    pub(crate) fn le_neg_1(x: NonZero<Finite<f64>>) -> Approx {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        let abs = Finite::new(x.abs());
+        let ln = Finite::new(abs.ln());
+
+        let cheb = chebyshev::eval(
+            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Finite::all(&constants::E11),
+            LessThan::new(18),
+            ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
+        );
+
+        let value = ln + cheb.value;
+        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        let init_err = cheb.error + epsilon * NonNegative::new(Finite::new(ln.abs()));
+        let addl_err = NonNegative::new(Finite::new(2_f64))
+            * epsilon
+            * NonNegative::new(Finite::new(value.abs()));
+
+        Approx {
+            value,
+            error: init_err + addl_err,
+        }
+    }
+
     /// Between the minimum input and -10.
     /// # Original C code
     /// ```c
@@ -87,47 +128,6 @@ pub(crate) mod piecewise {
         Approx {
             value,
             error: NonNegative::new(s * cheb.error.get() + addl_error.get()),
-        }
-    }
-
-    /// Between -4 and -1.
-    /// # Original C code
-    /// ```c
-    /// const double ln_term = -log(fabs(x));
-    /// gsl_sf_result result_c;
-    /// cheb_eval_e(&E11_cs, (2.0*x+5.0)/3.0, &result_c);
-    /// result->val  = (ln_term + result_c.val);
-    /// result->err  = (result_c.err + GSL_DBL_EPSILON * fabs(ln_term));
-    /// result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
-    /// return GSL_SUCCESS;
-    /// ```
-    #[inline]
-    pub(crate) fn le_neg_1(x: NonZero<Finite<f64>>) -> Approx {
-        #![expect(
-            clippy::arithmetic_side_effects,
-            reason = "property-based testing ensures this never happens"
-        )]
-
-        let abs = Finite::new(x.abs());
-        let ln = Finite::new(abs.ln());
-
-        let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
-            Finite::all(&constants::E11),
-            LessThan::new(18),
-            ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
-        );
-
-        let value = ln + cheb.value;
-        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
-        let init_err = cheb.error + epsilon * NonNegative::new(Finite::new(ln.abs()));
-        let addl_err = NonNegative::new(Finite::new(2_f64))
-            * epsilon
-            * NonNegative::new(Finite::new(value.abs()));
-
-        Approx {
-            value,
-            error: init_err + addl_err,
         }
     }
 }
