@@ -1,7 +1,30 @@
 mod doesnt_crash {
-    // Chebyshev approximation can balloon out of control,
-    // so it doesn't need to succeed for all inputs,
-    // but only on those we give it.
+    mod chebyshev {
+        extern crate alloc;
+
+        use {
+            crate::chebyshev, alloc::format, quickcheck::TestResult, quickcheck_macros::quickcheck,
+        };
+
+        // Chebyshev approximation can balloon out of control,
+        // so it doesn't need to succeed for all inputs,
+        // but only on those we give it.
+
+        // Test our `const` implementation of `min`
+        // again the standard library.
+        #[quickcheck]
+        fn min(a: usize, b: usize) -> TestResult {
+            let c = chebyshev::min(a, b);
+            let m = a.min(b);
+            if c == m {
+                TestResult::passed()
+            } else {
+                TestResult::error(format!(
+                    "`chebyshev::min({a}, {b}) = {c}`, but `{a}.min({b}) = {m}`"
+                ))
+            }
+        }
+    }
 
     mod implementation {
 

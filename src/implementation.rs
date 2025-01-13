@@ -10,8 +10,11 @@ pub(crate) mod piecewise {
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{Finite, NonNegative, NonZero, One, Sorted, less_than::usize::LessThan},
+        sigma_types::{Finite, NonZero, One, Sorted, less_than::usize::LessThan},
     };
+
+    #[cfg(feature = "error")]
+    use sigma_types::NonNegative;
 
     /// Between -4 and -1.
     /// # Original C code
@@ -43,14 +46,18 @@ pub(crate) mod piecewise {
         );
 
         let value = nln + cheb.value;
+        #[cfg(feature = "error")]
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        #[cfg(feature = "error")]
         let init_err = cheb.error + epsilon * NonNegative::new(Finite::new(nln.abs()));
+        #[cfg(feature = "error")]
         let addl_err = NonNegative::new(Finite::new(2_f64))
             * epsilon
             * NonNegative::new(Finite::new(value.abs()));
 
         Approx {
             value,
+            #[cfg(feature = "error")]
             error: init_err + addl_err,
         }
     }
@@ -83,14 +90,21 @@ pub(crate) mod piecewise {
         );
 
         let value = s * (Finite::ONE + cheb.value);
+        #[cfg(feature = "error")]
         let abs_x: NonNegative<Finite<f64>> = x.map(|f| f.map(f64::abs));
+        #[cfg(feature = "error")]
         let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+        #[cfg(feature = "error")]
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        #[cfg(feature = "error")]
         let two = NonNegative::new(Finite::new(2_f64));
+        #[cfg(feature = "error")]
         let init_err = s * *cheb.error;
+        #[cfg(feature = "error")]
         let addl_err = two * epsilon * (abs_x + One::ONE) * abs_value;
         Approx {
             value,
+            #[cfg(feature = "error")]
             error: NonNegative::new(init_err + addl_err.get()),
         }
     }
@@ -123,13 +137,19 @@ pub(crate) mod piecewise {
         );
 
         let value = s * (Finite::ONE + cheb.value);
+        #[cfg(feature = "error")]
         let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+        #[cfg(feature = "error")]
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        #[cfg(feature = "error")]
         let two = NonNegative::new(Finite::new(2_f64));
+        #[cfg(feature = "error")]
         let init_err = s * *cheb.error;
+        #[cfg(feature = "error")]
         let addl_err = two * epsilon * abs_value;
         Approx {
             value,
+            #[cfg(feature = "error")]
             error: NonNegative::new(init_err + addl_err.get()),
         }
     }
@@ -164,14 +184,18 @@ pub(crate) mod piecewise {
         );
 
         let value = nln - Finite::new(0.6875_f64) + *x + cheb.value;
+        #[cfg(feature = "error")]
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        #[cfg(feature = "error")]
         let init_err = cheb.error + epsilon * NonNegative::new(Finite::new(nln.abs()));
+        #[cfg(feature = "error")]
         let addl_err = NonNegative::new(Finite::new(2_f64))
             * epsilon
             * NonNegative::new(Finite::new(value.abs()));
 
         Approx {
             value,
+            #[cfg(feature = "error")]
             error: init_err + addl_err,
         }
     }

@@ -18,10 +18,12 @@ pub mod with_error;
 
 use {
     core::fmt,
-    sigma_types::{Finite, NonNegative, NonZero},
+    sigma_types::{Finite, NonZero},
 };
 
-// TODO: add a `with-error` feature and, when that's off, reduce this to `f64`
+#[cfg(feature = "error")]
+use sigma_types::NonNegative;
+
 /// An approximate value alongside an estimate of its own approximation error.
 /// # Original C code
 /// ```c
@@ -35,6 +37,7 @@ use {
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Approx {
     /// Estimate of the approximation error for `value`.
+    #[cfg(feature = "error")]
     pub error: NonNegative<Finite<f64>>,
     /// Approximate value.
     pub value: Finite<f64>,
@@ -44,10 +47,18 @@ impl fmt::Display for Approx {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let Self {
+            #[cfg(feature = "error")]
             ref error,
             ref value,
         } = *self;
-        write!(f, "{value} +/- {error}")
+        #[cfg(feature = "error")]
+        {
+            write!(f, "{value} +/- {error}")
+        }
+        #[cfg(not(feature = "error"))]
+        {
+            write!(f, "{value}")
+        }
     }
 }
 
@@ -94,5 +105,5 @@ impl fmt::Display for Error {
 /// See `Error`.
 #[inline(always)]
 pub fn Ei(x: NonZero<Finite<f64>>) -> Result<Finite<f64>, Error> {
-    with_error::Ei(x).map(|Approx { error: _, value }| value)
+    with_error::Ei(x).map(|approx| approx.value)
 }

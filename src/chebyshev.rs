@@ -1,9 +1,12 @@
 //! Chebyshev series/polynomial approximation.
 
 use {
-    crate::{Approx, constants},
-    sigma_types::{Finite, NonNegative, Sorted, Zero as _, less_than::usize::LessThan},
+    crate::Approx,
+    sigma_types::{Finite, Sorted, Zero as _, less_than::usize::LessThan},
 };
+
+#[cfg(feature = "error")]
+use {crate::constants, sigma_types::NonNegative};
 
 /// Chebyshev series/polynomial approximation.
 /// # Original C code
@@ -53,6 +56,7 @@ use {
 /// }
 /// ```
 #[inline]
+#[must_use]
 pub fn eval<const N: usize>(
     endpoints: Sorted<[Finite<f64>; 2], false>,
     coefficients: &[Finite<f64>; N],
@@ -63,7 +67,10 @@ pub fn eval<const N: usize>(
         clippy::arithmetic_side_effects,
         reason = "property-based testing ensures this never happens"
     )]
-    #![expect(clippy::many_single_char_names, reason = "original names")]
+    #![cfg_attr(
+        feature = "error",
+        expect(clippy::many_single_char_names, reason = "original names")
+    )]
 
     debug_assert!(N > 0, "Chebyshev series without any coefficients");
 
@@ -73,6 +80,7 @@ pub fn eval<const N: usize>(
     };
     let y2: Finite<f64> = Finite::new(2_f64) * y;
 
+    #[cfg(feature = "error")]
     let mut e = NonNegative::<Finite<f64>>::ZERO;
 
     let mut d = Finite::<f64>::ZERO;
@@ -86,9 +94,12 @@ pub fn eval<const N: usize>(
             let coefficient = *unsafe { coefficients.get_unchecked(j) };
             let tmp = d;
             d = ((y2 * d) - dd) + coefficient;
-            e += NonNegative::new((y2 * tmp).map(f64::abs))
-                + NonNegative::new(dd.map(f64::abs))
-                + NonNegative::new(coefficient.map(f64::abs));
+            #[cfg(feature = "error")]
+            {
+                e += NonNegative::new((y2 * tmp).map(f64::abs))
+                    + NonNegative::new(dd.map(f64::abs))
+                    + NonNegative::new(coefficient.map(f64::abs));
+            }
             dd = tmp;
 
             j -= 1;
@@ -96,24 +107,38 @@ pub fn eval<const N: usize>(
     }
 
     {
+        #[cfg(feature = "error")]
         let tmp = d;
         // SAFETY:
         // Sigma types ensure validity.
         let coefficient = *unsafe { coefficients.get_unchecked(0) };
         let half_coefficient = coefficient.map(|c| 0.5_f64 * c);
         d = y * d - dd + half_coefficient;
-        e += NonNegative::new((y * tmp).map(f64::abs))
-            + NonNegative::new(dd.map(f64::abs))
-            + NonNegative::new(half_coefficient.map(f64::abs));
+        #[cfg(feature = "error")]
+        {
+            e += NonNegative::new((y * tmp).map(f64::abs))
+                + NonNegative::new(dd.map(f64::abs))
+                + NonNegative::new(half_coefficient.map(f64::abs));
+        }
     }
 
+    #[cfg(feature = "error")]
     // SAFETY:
     // See `debug_assert`s above.
     let last_coefficient = *unsafe { coefficients.get_unchecked(order.get()) };
 
     Approx {
         value: d,
+        #[cfg(feature = "error")]
         error: NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON)) * e
             + NonNegative::new(last_coefficient.map(f64::abs)),
     }
+}
+
+/// Compile-time-compatible minimum of two large unsigned integers.
+#[inline]
+#[cfg_attr(not(test), expect(dead_code, reason = "TODO: REMOVE"))]
+#[cfg_attr(test, expect(clippy::single_call_fn, reason = "TODO: REMOVE"))]
+pub(crate) const fn min(a: usize, b: usize) -> usize {
+    if a.checked_sub(b).is_some() { b } else { a }
 }

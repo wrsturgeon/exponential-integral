@@ -87,7 +87,12 @@
             git = "https://github.com/neithernut/quickcheck.git";
           };
         };
-        features = { };
+        features = {
+          error = {
+            dependencies = { };
+            other-features = [ ];
+          };
+        };
         feature-dependencies = builtins.foldl' (
           acc: { dependencies, other-features }: acc // dependencies
         ) { } (builtins.attrValues features);

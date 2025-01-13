@@ -143,6 +143,7 @@ pub(crate) const AE11_F: &[Finite<f64>; size::AE11] = {
 };
 */
 
+#[cfg(feature = "error")]
 /// I'd guess that this is the maximum (average?) error between adjacent `f64` values.
 pub(crate) const GSL_DBL_EPSILON: f64 = 2.220_446_049_250_313_1e-16;
 

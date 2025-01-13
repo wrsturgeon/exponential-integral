@@ -22,6 +22,7 @@ quickcheck = { default-features = false, features = [  ], git = "https://github.
 quickcheck_macros = { default-features = false, features = [  ], git = "https://github.com/neithernut/quickcheck.git" }
 
 [features]
+error = [  ]
 
 [lints.rust]
 abi-unsupported-vector-types = "deny"
