@@ -82,9 +82,7 @@ pub(crate) mod piecewise {
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{
-            Finite, Negative, NonZero, One, Positive, Sorted, less_than::usize::LessThan,
-        },
+        sigma_types::{Finite, Negative, NonZero, One, Positive, less_than::usize::LessThan},
     };
 
     #[cfg(feature = "error")]
@@ -113,7 +111,6 @@ pub(crate) mod piecewise {
         let nln = -ln;
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::E11),
             LessThan::new(18),
             ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
@@ -157,7 +154,6 @@ pub(crate) mod piecewise {
         let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE11),
             LessThan::new(38),
             (Finite::new(20_f64) / *x) + One::ONE,
@@ -204,7 +200,6 @@ pub(crate) mod piecewise {
         let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE12),
             LessThan::new(24),
             ((Finite::new(40_f64) / *x) + Finite::new(7_f64)) / Finite::new(3_f64),
@@ -250,12 +245,7 @@ pub(crate) mod piecewise {
         let ln = Finite::new(abs.ln());
         let nln = -ln;
 
-        let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
-            Finite::all(&constants::E12),
-            LessThan::new(15),
-            *x,
-        );
+        let cheb = chebyshev::eval(Finite::all(&constants::E12), LessThan::new(15), *x);
 
         let value = nln - Finite::new(0.6875_f64) + *x + cheb.value;
         #[cfg(feature = "error")]
@@ -295,7 +285,6 @@ pub(crate) mod piecewise {
         let s = (Finite::<f64>::ONE / *x) * (-*x).map(f64::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE13),
             LessThan::new(24),
             (Finite::new(8_f64) / *x - Finite::new(5_f64)) / Finite::new(3_f64),
@@ -342,7 +331,6 @@ pub(crate) mod piecewise {
         let s = (Finite::<f64>::ONE / *x) * (-*x).map(f64::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE14),
             LessThan::new(25),
             (Finite::new(8_f64) / *x) - Finite::new(1_f64),

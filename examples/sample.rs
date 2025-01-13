@@ -32,7 +32,7 @@ fn in_range(lo: f64, hi: f64, g: &mut Gen) -> NonZero<Finite<f64>> {
 }
 
 fn main() {
-    let x = in_range(-16_f64, 4_f64, &mut Gen::new(256));
+    let x = in_range(-16_f64, 16_f64, &mut Gen::new(256));
     println!("x = {x}");
     let ei = Ei(x);
     match ei {

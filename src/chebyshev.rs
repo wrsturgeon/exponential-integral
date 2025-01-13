@@ -2,7 +2,7 @@
 
 use {
     crate::Approx,
-    sigma_types::{Finite, Sorted, Zero as _, less_than::usize::LessThan},
+    sigma_types::{Finite, Zero as _, less_than::usize::LessThan},
 };
 
 #[cfg(feature = "error")]
@@ -32,14 +32,14 @@ use {crate::constants, sigma_types::NonNegative};
 ///   double dd = 0.0;
 ///
 ///   double y  = (2.0*x - cs->a - cs->b) / (cs->b - cs->a);
-///   double y2 = 2.0 * y;
+///   double two_x = 2.0 * y;
 ///
 ///   double e = 0.0;
 ///
 ///   for(j = cs->order; j>=1; j--) {
 ///     double temp = d;
-///     d = y2*d - dd + cs->c[j];
-///     e += fabs(y2*temp) + fabs(dd) + fabs(cs->c[j]);
+///     d = two_x*d - dd + cs->c[j];
+///     e += fabs(two_x*temp) + fabs(dd) + fabs(cs->c[j]);
 ///     dd = temp;
 ///   }
 ///
@@ -58,7 +58,6 @@ use {crate::constants, sigma_types::NonNegative};
 #[inline]
 #[must_use]
 pub fn eval<const N: usize>(
-    endpoints: Sorted<[Finite<f64>; 2], false>,
     coefficients: &[Finite<f64>; N],
     order: LessThan<{ N }>,
     x: Finite<f64>,
@@ -74,11 +73,7 @@ pub fn eval<const N: usize>(
 
     debug_assert!(N > 0, "Chebyshev series without any coefficients");
 
-    let y: Finite<f64> = {
-        let [a, b] = endpoints.get();
-        (((Finite::new(2_f64) * x) - a) - b) / (b - a)
-    };
-    let y2: Finite<f64> = Finite::new(2_f64) * y;
+    let two_x: Finite<f64> = Finite::new(2_f64) * x;
 
     #[cfg(feature = "error")]
     let mut e = NonNegative::<Finite<f64>>::ZERO;
@@ -93,10 +88,10 @@ pub fn eval<const N: usize>(
             // See the `debug_assert` above.
             let coefficient = *unsafe { coefficients.get_unchecked(j) };
             let tmp = d;
-            d = ((y2 * d) - dd) + coefficient;
+            d = ((two_x * d) - dd) + coefficient;
             #[cfg(feature = "error")]
             {
-                e += NonNegative::new((y2 * tmp).map(f64::abs))
+                e += NonNegative::new((two_x * tmp).map(f64::abs))
                     + NonNegative::new(dd.map(f64::abs))
                     + NonNegative::new(coefficient.map(f64::abs));
             }
@@ -113,10 +108,10 @@ pub fn eval<const N: usize>(
         // Sigma types ensure validity.
         let coefficient = *unsafe { coefficients.get_unchecked(0) };
         let half_coefficient = coefficient.map(|c| 0.5_f64 * c);
-        d = y * d - dd + half_coefficient;
+        d = x * d - dd + half_coefficient;
         #[cfg(feature = "error")]
         {
-            e += NonNegative::new((y * tmp).map(f64::abs))
+            e += NonNegative::new((x * tmp).map(f64::abs))
                 + NonNegative::new(dd.map(f64::abs))
                 + NonNegative::new(half_coefficient.map(f64::abs));
         }
