@@ -1,3 +1,11 @@
+#![cfg_attr(
+    not(feature = "precision"),
+    expect(
+        unused_variables,
+        reason = "`quickcheck` macro doesn't like conditional compilation, so some must go unused"
+    )
+)]
+
 mod doesnt_crash {
     mod chebyshev {
         extern crate alloc;
@@ -36,8 +44,12 @@ mod doesnt_crash {
             };
 
             #[quickcheck]
-            fn e1(x: Negative<Finite<f64>>) {
-                _ = E1(x);
+            fn e1(x: Negative<Finite<f64>>, order: usize) {
+                _ = E1(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
             }
         }
 
@@ -50,74 +62,98 @@ mod doesnt_crash {
             };
 
             #[quickcheck]
-            fn neg_10(x: Negative<Finite<f64>>) -> TestResult {
+            fn neg_10(x: Negative<Finite<f64>>, order: usize) -> TestResult {
                 if **x < constants::NXMAX {
                     return TestResult::discard();
                 }
                 if **x > -10_f64 {
                     return TestResult::discard();
                 }
-                _ = le_neg_10(x);
+                _ = le_neg_10(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
 
             #[quickcheck]
-            fn neg_4(x: Negative<Finite<f64>>) -> TestResult {
+            fn neg_4(x: Negative<Finite<f64>>, order: usize) -> TestResult {
                 if **x <= -10_f64 {
                     return TestResult::discard();
                 }
                 if **x > -4_f64 {
                     return TestResult::discard();
                 }
-                _ = le_neg_4(x);
+                _ = le_neg_4(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
 
             #[quickcheck]
-            fn neg_1(x: Negative<Finite<f64>>) -> TestResult {
+            fn neg_1(x: Negative<Finite<f64>>, order: usize) -> TestResult {
                 if **x <= -4_f64 {
                     return TestResult::discard();
                 }
                 if **x > -1_f64 {
                     return TestResult::discard();
                 }
-                _ = le_neg_1(x);
+                _ = le_neg_1(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
 
             #[quickcheck]
-            fn pos_1(x: NonZero<Finite<f64>>) -> TestResult {
+            fn pos_1(x: NonZero<Finite<f64>>, order: usize) -> TestResult {
                 if **x <= -1_f64 {
                     return TestResult::discard();
                 }
                 if **x > 1_f64 {
                     return TestResult::discard();
                 }
-                _ = le_pos_1(x);
+                _ = le_pos_1(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
 
             #[quickcheck]
-            fn pos_4(x: Positive<Finite<f64>>) -> TestResult {
+            fn pos_4(x: Positive<Finite<f64>>, order: usize) -> TestResult {
                 if **x <= 1_f64 {
                     return TestResult::discard();
                 }
                 if **x > 4_f64 {
                     return TestResult::discard();
                 }
-                _ = le_pos_4(x);
+                _ = le_pos_4(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
 
             #[quickcheck]
-            fn pos_max(x: Positive<Finite<f64>>) -> TestResult {
+            fn pos_max(x: Positive<Finite<f64>>, order: usize) -> TestResult {
                 if **x <= 4_f64 {
                     return TestResult::discard();
                 }
                 if **x > constants::XMAX {
                     return TestResult::discard();
                 }
-                _ = le_pos_max(x);
+                _ = le_pos_max(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
                 TestResult::passed()
             }
         }
@@ -130,8 +166,12 @@ mod doesnt_crash {
             };
 
             #[quickcheck]
-            fn e1(x: Positive<Finite<f64>>) {
-                _ = E1(x);
+            fn e1(x: Positive<Finite<f64>>, order: usize) {
+                _ = E1(
+                    x,
+                    #[cfg(feature = "precision")]
+                    order,
+                );
             }
         }
 
@@ -142,8 +182,12 @@ mod doesnt_crash {
         };
 
         #[quickcheck]
-        fn e1(x: NonZero<Finite<f64>>) {
-            _ = E1(x);
+        fn e1(x: NonZero<Finite<f64>>, order: usize) {
+            _ = E1(
+                x,
+                #[cfg(feature = "precision")]
+                order,
+            );
         }
     }
 
@@ -155,22 +199,34 @@ mod doesnt_crash {
     };
 
     #[quickcheck]
-    fn e1(x: NonZero<Finite<f64>>) {
-        _ = E1(x);
+    fn e1(x: NonZero<Finite<f64>>, order: usize) {
+        _ = E1(
+            x,
+            #[cfg(feature = "precision")]
+            order,
+        );
     }
 
     #[quickcheck]
-    fn ei(x: NonZero<Finite<f64>>) {
-        _ = Ei(x);
+    fn ei(x: NonZero<Finite<f64>>, order: usize) {
+        _ = Ei(
+            x,
+            #[cfg(feature = "precision")]
+            order,
+        );
     }
 
     #[quickcheck]
-    fn ei_near_zero(x: NonZero<Finite<f64>>) -> TestResult {
+    fn ei_near_zero(x: NonZero<Finite<f64>>, order: usize) -> TestResult {
         let Some(smaller) = Finite::try_new(**x / 1_000_000_000_000_f64).and_then(NonZero::try_new)
         else {
             return TestResult::discard();
         };
-        _ = Ei(smaller);
+        _ = Ei(
+            smaller,
+            #[cfg(feature = "precision")]
+            order,
+        );
         TestResult::passed()
     }
 }

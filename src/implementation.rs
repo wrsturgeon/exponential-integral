@@ -33,14 +33,25 @@ pub(crate) mod neg {
         not(test),
         expect(clippy::single_call_fn, reason = "to mirror the C implementation")
     )]
-    pub(crate) fn E1(x: Negative<Finite<f64>>) -> Result<Approx, HugeArgument> {
+    pub(crate) fn E1(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
         match (**x).partial_cmp(&-10_f64) {
             // = -10
-            Some(Ordering::Equal) => Ok(piecewise::le_neg_10(x)),
+            Some(Ordering::Equal) => Ok(piecewise::le_neg_10(
+                x,
+                #[cfg(feature = "precision")]
+                max_precision,
+            )),
             // (-\infty, -10)
             Some(Ordering::Less) => match (**x).partial_cmp(&constants::NXMAX) {
                 // (-XMAX, -10]
-                Some(Ordering::Greater) => Ok(piecewise::le_neg_10(x)),
+                Some(Ordering::Greater) => Ok(piecewise::le_neg_10(
+                    x,
+                    #[cfg(feature = "precision")]
+                    max_precision,
+                )),
                 // (-\infty, -XMAX]
                 Some(Ordering::Less | Ordering::Equal) => Err(HugeArgument(x)),
                 // SAFETY:
@@ -50,13 +61,25 @@ pub(crate) mod neg {
             // (-10, 0)
             Some(Ordering::Greater) => Ok(match (**x).partial_cmp(&-4_f64) {
                 // (-10, -4]
-                Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_4(x),
+                Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_4(
+                    x,
+                    #[cfg(feature = "precision")]
+                    max_precision,
+                ),
                 // (-4, 0)
                 Some(Ordering::Greater) => match (**x).partial_cmp(&-1_f64) {
                     // (-4, -1]
-                    Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_1(x),
+                    Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_1(
+                        x,
+                        #[cfg(feature = "precision")]
+                        max_precision,
+                    ),
                     // (-1, 0)
-                    Some(Ordering::Greater) => piecewise::le_pos_1(x.also()),
+                    Some(Ordering::Greater) => piecewise::le_pos_1(
+                        x.also(),
+                        #[cfg(feature = "precision")]
+                        max_precision,
+                    ),
                     // SAFETY:
                     // absurd case: `x` is finite
                     None => unsafe { unreachable_unchecked() },
@@ -82,11 +105,14 @@ pub(crate) mod piecewise {
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{Finite, Negative, NonZero, One, Positive, less_than::usize::LessThan},
+        sigma_types::{Finite, Negative, NonZero, One, Positive},
     };
 
     #[cfg(feature = "error")]
     use sigma_types::NonNegative;
+
+    #[cfg(feature = "precision")]
+    use sigma_types::less_than::usize::LessThan;
 
     /// Between -4 and -1.
     /// # Original C code
@@ -100,7 +126,10 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_1(x: Negative<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_1(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -112,8 +141,9 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::E11),
-            LessThan::new(18),
             ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::E11 - 1 })),
         );
 
         let value = nln + cheb.value;
@@ -145,7 +175,10 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_10(x: Negative<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_10(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -155,8 +188,9 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::AE11),
-            LessThan::new(38),
             (Finite::new(20_f64) / *x) + One::ONE,
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::AE11 - 1 })),
         );
 
         let value = s * (Finite::ONE + cheb.value);
@@ -191,7 +225,10 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_4(x: Negative<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_4(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -201,8 +238,9 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::AE12),
-            LessThan::new(24),
             ((Finite::new(40_f64) / *x) + Finite::new(7_f64)) / Finite::new(3_f64),
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::AE12 - 1 })),
         );
 
         let value = s * (Finite::ONE + cheb.value);
@@ -235,7 +273,10 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_pos_1(x: NonZero<Finite<f64>>) -> Approx {
+    pub(crate) fn le_pos_1(
+        x: NonZero<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -245,7 +286,12 @@ pub(crate) mod piecewise {
         let ln = Finite::new(abs.ln());
         let nln = -ln;
 
-        let cheb = chebyshev::eval(Finite::all(&constants::E12), LessThan::new(15), *x);
+        let cheb = chebyshev::eval(
+            Finite::all(&constants::E12),
+            *x,
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::E12 - 1 })),
+        );
 
         let value = nln - Finite::new(0.6875_f64) + *x + cheb.value;
         #[cfg(feature = "error")]
@@ -276,7 +322,10 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_pos_4(x: Positive<Finite<f64>>) -> Approx {
+    pub(crate) fn le_pos_4(
+        x: Positive<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -286,8 +335,9 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::AE13),
-            LessThan::new(24),
             (Finite::new(8_f64) / *x - Finite::new(5_f64)) / Finite::new(3_f64),
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::AE13 - 1 })),
         );
 
         let value = s * (Finite::ONE + cheb.value);
@@ -322,7 +372,10 @@ pub(crate) mod piecewise {
     ///   return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_pos_max(x: Positive<Finite<f64>>) -> Approx {
+    pub(crate) fn le_pos_max(
+        x: Positive<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -332,8 +385,9 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::AE14),
-            LessThan::new(25),
             (Finite::new(8_f64) / *x) - Finite::new(1_f64),
+            #[cfg(feature = "precision")]
+            LessThan::new(max_precision.min(const { constants::size::AE14 - 1 })),
         );
 
         let value = s * (Finite::ONE + cheb.value);
@@ -388,23 +442,42 @@ pub(crate) mod pos {
         not(test),
         expect(clippy::single_call_fn, reason = "to mirror the C implementation")
     )]
-    pub(crate) fn E1(x: Positive<Finite<f64>>) -> Result<Approx, HugeArgument> {
+    pub(crate) fn E1(
+        x: Positive<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
         match (**x).partial_cmp(&4_f64) {
             // = 4
-            Some(Ordering::Equal) => Ok(piecewise::le_pos_4(x)),
+            Some(Ordering::Equal) => Ok(piecewise::le_pos_4(
+                x,
+                #[cfg(feature = "precision")]
+                max_precision,
+            )),
             // (0, +4)
             Some(Ordering::Less) => Ok(match (**x).partial_cmp(&1_f64) {
                 // (0, +1]
-                Some(Ordering::Less | Ordering::Equal) => piecewise::le_pos_1(x.also()),
+                Some(Ordering::Less | Ordering::Equal) => piecewise::le_pos_1(
+                    x.also(),
+                    #[cfg(feature = "precision")]
+                    max_precision,
+                ),
                 // (+1, +\infty]
-                Some(Ordering::Greater) => piecewise::le_pos_4(x),
+                Some(Ordering::Greater) => piecewise::le_pos_4(
+                    x,
+                    #[cfg(feature = "precision")]
+                    max_precision,
+                ),
                 // SAFETY:
                 // absurd case: `x` is finite
                 None => unsafe { unreachable_unchecked() },
             }),
             // (+4, +\infty)
             Some(Ordering::Greater) => match (**x).partial_cmp(&constants::XMAX) {
-                Some(Ordering::Less) => Ok(piecewise::le_pos_max(x)),
+                Some(Ordering::Less) => Ok(piecewise::le_pos_max(
+                    x,
+                    #[cfg(feature = "precision")]
+                    max_precision,
+                )),
                 Some(Ordering::Equal | Ordering::Greater) => Err(HugeArgument(x)),
                 // SAFETY:
                 // absurd case: `x` is finite
@@ -513,16 +586,25 @@ use {
     not(test),
     expect(clippy::single_call_fn, reason = "to mirror the C implementation")
 )]
-pub(crate) fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
+pub(crate) fn E1(
+    x: NonZero<Finite<f64>>,
+    #[cfg(feature = "precision")] max_precision: usize,
+) -> Result<Approx, Error> {
     match (**x).partial_cmp(&0_f64) {
         // (-\infty, 0)
-        Some(Ordering::Less) => {
-            neg::E1(x.also()).map_err(|neg::HugeArgument(arg)| Error::ArgumentTooNegative(arg))
-        }
+        Some(Ordering::Less) => neg::E1(
+            x.also(),
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+        .map_err(|neg::HugeArgument(arg)| Error::ArgumentTooNegative(arg)),
         // (0, +\infty)
-        Some(Ordering::Greater) => {
-            pos::E1(x.also()).map_err(|pos::HugeArgument(arg)| Error::ArgumentTooPositive(arg))
-        }
+        Some(Ordering::Greater) => pos::E1(
+            x.also(),
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+        .map_err(|pos::HugeArgument(arg)| Error::ArgumentTooPositive(arg)),
         // SAFETY:
         // absurd case: `x` is finite and nonzero
         Some(Ordering::Equal) | None => unsafe { unreachable_unchecked() },

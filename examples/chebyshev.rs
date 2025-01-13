@@ -11,45 +11,46 @@
 )]
 
 use {
-    core::cmp::Ordering,
     exponential_integral::chebyshev,
     quickcheck::{Arbitrary, Gen},
-    sigma_types::{Finite, Sorted, less_than::usize::LessThan},
+    sigma_types::Finite,
 };
+
+#[cfg(feature = "precision")]
+use sigma_types::less_than::usize::LessThan;
 
 fn main() {
     const N: usize = 8;
 
     let mut g = Gen::new(256);
 
-    loop {
-        #[expect(clippy::type_complexity, reason = "grow up")]
-        let (a, b, coefficient_tuple, raw_order, x): (
-            Finite<f64>,
-            Finite<f64>,
-            (f64, f64, f64, f64, f64, f64, f64, f64),
-            usize,
-            Finite<f64>,
-        ) = Arbitrary::arbitrary(&mut g);
+    #[expect(clippy::type_complexity, reason = "grow up")]
+    let (coefficient_tuple, x): ((f64, f64, f64, f64, f64, f64, f64, f64), Finite<f64>) =
+        Arbitrary::arbitrary(&mut g);
 
-        let endpoints = Sorted::new(match a.partial_cmp(&b) {
-            Some(Ordering::Less) => [a, b],
-            Some(Ordering::Greater) => [b, a],
-            Some(Ordering::Equal) | None => continue,
-        });
+    #[cfg(feature = "precision")]
+    let raw_order = usize::arbitrary(&mut g);
 
-        let raw_coefficients: [_; N] = coefficient_tuple.into();
-        let coefficients = Finite::all(&raw_coefficients);
+    let raw_coefficients: [_; N] = coefficient_tuple.into();
+    let coefficients = Finite::all(&raw_coefficients);
 
-        #[expect(clippy::integer_division_remainder_used, reason = "not cryptographic")]
-        let order = LessThan::new(raw_order % N);
+    #[cfg(feature = "precision")]
+    #[expect(clippy::integer_division_remainder_used, reason = "not cryptographic")]
+    let order = LessThan::new(raw_order % N);
 
-        let evaluated = chebyshev::eval(endpoints, coefficients, order, x);
-        println!(
-            "chebyshev::eval{:#?} = {evaluated:#?}",
-            (endpoints, coefficients, order, x),
-        );
-
-        return;
-    }
+    let evaluated = chebyshev::eval(
+        coefficients,
+        x,
+        #[cfg(feature = "precision")]
+        order,
+    );
+    println!(
+        "chebyshev::eval{:#?} = {evaluated:#?}",
+        (
+            coefficients,
+            x,
+            #[cfg(feature = "precision")]
+            order,
+        ),
+    );
 }

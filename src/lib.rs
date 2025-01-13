@@ -99,8 +99,15 @@ impl fmt::Display for Error {
 /// # Errors
 /// See `Error`.
 #[inline]
-pub fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
-    implementation::E1(x)
+pub fn E1(
+    x: NonZero<Finite<f64>>,
+    #[cfg(feature = "precision")] max_precision: usize,
+) -> Result<Approx, Error> {
+    implementation::E1(
+        x,
+        #[cfg(feature = "precision")]
+        max_precision,
+    )
 }
 
 /// # Original C code
@@ -120,13 +127,21 @@ pub fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
 /// # Errors
 /// See `Error`.
 #[inline(always)]
-pub fn Ei(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
+pub fn Ei(
+    x: NonZero<Finite<f64>>,
+    #[cfg(feature = "precision")] max_precision: usize,
+) -> Result<Approx, Error> {
     #![expect(
         clippy::arithmetic_side_effects,
         reason = "property-based testing ensures this never happens"
     )]
 
-    E1(-x).map(|mut approx| {
+    E1(
+        -x,
+        #[cfg(feature = "precision")]
+        max_precision,
+    )
+    .map(|mut approx| {
         approx.value = -approx.value;
         approx
     })

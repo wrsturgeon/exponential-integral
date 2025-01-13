@@ -92,6 +92,10 @@
             dependencies = { };
             other-features = [ ];
           };
+          precision = {
+            dependencies = { };
+            other-features = [ ];
+          };
         };
         feature-dependencies = builtins.foldl' (
           acc: { dependencies, other-features }: acc // dependencies

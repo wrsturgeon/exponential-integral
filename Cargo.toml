@@ -23,6 +23,7 @@ quickcheck_macros = { version = "=1.0.0", default-features = false, features = [
 
 [features]
 error = [  ]
+precision = [  ]
 
 [lints.rust]
 abi-unsupported-vector-types = "deny"

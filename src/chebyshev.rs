@@ -57,21 +57,20 @@ use {crate::constants, sigma_types::NonNegative};
 /// ```
 #[inline]
 #[must_use]
-pub fn eval<const N: usize>(
-    coefficients: &[Finite<f64>; N],
-    order: LessThan<{ N }>,
+pub fn eval<const N_COEFFICIENTS: usize>(
+    coefficients: &[Finite<f64>; N_COEFFICIENTS],
     x: Finite<f64>,
+    #[cfg(feature = "precision")] order: LessThan<{ N_COEFFICIENTS }>,
 ) -> Approx {
     #![expect(
         clippy::arithmetic_side_effects,
         reason = "property-based testing ensures this never happens"
     )]
-    #![cfg_attr(
-        feature = "error",
-        expect(clippy::many_single_char_names, reason = "original names")
-    )]
 
-    debug_assert!(N > 0, "Chebyshev series without any coefficients");
+    debug_assert!(
+        N_COEFFICIENTS > 0,
+        "Chebyshev series without any coefficients",
+    );
 
     let two_x: Finite<f64> = Finite::new(2_f64) * x;
 
@@ -82,11 +81,20 @@ pub fn eval<const N: usize>(
     let mut dd = Finite::<f64>::ZERO;
 
     {
-        let mut j = *order;
-        while j >= 1 {
+        let mut j: LessThan<{ N_COEFFICIENTS }> = {
+            #[cfg(feature = "precision")]
+            {
+                order
+            }
+            #[cfg(not(feature = "precision"))]
+            {
+                LessThan::new(const { N_COEFFICIENTS - 1 })
+            }
+        };
+        while *j >= 1 {
             // SAFETY:
             // See the `debug_assert` above.
-            let coefficient = *unsafe { coefficients.get_unchecked(j) };
+            let coefficient = *unsafe { coefficients.get_unchecked(*j) };
             let tmp = d;
             d = ((two_x * d) - dd) + coefficient;
             #[cfg(feature = "error")]
@@ -97,7 +105,7 @@ pub fn eval<const N: usize>(
             }
             dd = tmp;
 
-            j -= 1;
+            j.map_mut(|u| *u -= 1);
         }
     }
 
@@ -120,7 +128,7 @@ pub fn eval<const N: usize>(
     #[cfg(feature = "error")]
     // SAFETY:
     // See `debug_assert`s above.
-    let last_coefficient = *unsafe { coefficients.get_unchecked(order.get()) };
+    let last_coefficient = *unsafe { coefficients.get_unchecked(const { N_COEFFICIENTS - 1 }) };
 
     Approx {
         value: d,
