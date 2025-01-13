@@ -1,5 +1,77 @@
 //! Behind the curtain: actual implementations. May change (but almost surely won't).
 
+pub(crate) mod neg {
+    //! E1 for inputs less than 0.
+
+    use {
+        crate::{Approx, constants, implementation::piecewise},
+        core::{cmp::Ordering, fmt, hint::unreachable_unchecked},
+        sigma_types::{Finite, Negative},
+    };
+
+    /// Argument too large (negative): minimum is `constants::NXMAX`
+    pub(crate) struct HugeArgument(pub(crate) Negative<Finite<f64>>);
+
+    impl fmt::Display for HugeArgument {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let Self(ref arg) = *self;
+            write!(
+                f,
+                "Argument too large (negative): minimum is {}, but {arg} was supplied",
+                constants::NXMAX,
+            )
+        }
+    }
+
+    /// See `implementation::E1` for the original C code,
+    /// since the original code isn't partitioned by sign.
+    /// # Errors
+    /// See `HugeArgument`.
+    #[inline]
+    #[cfg_attr(
+        not(test),
+        expect(clippy::single_call_fn, reason = "to mirror the C implementation")
+    )]
+    pub(crate) fn E1(x: Negative<Finite<f64>>) -> Result<Approx, HugeArgument> {
+        match (**x).partial_cmp(&-10_f64) {
+            // = -10
+            Some(Ordering::Equal) => Ok(piecewise::le_neg_10(x)),
+            // (-\infty, -10)
+            Some(Ordering::Less) => match (**x).partial_cmp(&constants::NXMAX) {
+                // (-XMAX, -10]
+                Some(Ordering::Greater) => Ok(piecewise::le_neg_10(x)),
+                // (-\infty, -XMAX]
+                Some(Ordering::Less | Ordering::Equal) => Err(HugeArgument(x)),
+                // SAFETY:
+                // absurd case, since `x` is finite
+                None => unsafe { unreachable_unchecked() },
+            },
+            // (-10, 0)
+            Some(Ordering::Greater) => Ok(match (**x).partial_cmp(&-4_f64) {
+                // (-10, -4]
+                Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_4(x),
+                // (-4, 0)
+                Some(Ordering::Greater) => match (**x).partial_cmp(&-1_f64) {
+                    // (-4, -1]
+                    Some(Ordering::Less | Ordering::Equal) => piecewise::le_neg_1(x),
+                    // (-1, 0)
+                    Some(Ordering::Greater) => piecewise::le_pos_1(x.also()),
+                    // SAFETY:
+                    // absurd case, since `x` is finite
+                    None => unsafe { unreachable_unchecked() },
+                },
+                // SAFETY:
+                // absurd case, since `x` is finite
+                None => unsafe { unreachable_unchecked() },
+            }),
+            // SAFETY:
+            // absurd case, since `x` is finite
+            None => unsafe { unreachable_unchecked() },
+        }
+    }
+}
+
 /// Specialized approximations to be used on disjoint intervals of the domain,
 /// instead of a one-size-fits-all approach.
 pub(crate) mod piecewise {
@@ -10,7 +82,9 @@ pub(crate) mod piecewise {
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{Finite, NonZero, One, Sorted, less_than::usize::LessThan},
+        sigma_types::{
+            Finite, Negative, NonZero, One, Positive, Sorted, less_than::usize::LessThan,
+        },
     };
 
     #[cfg(feature = "error")]
@@ -28,7 +102,7 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_1(x: NonZero<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_1(x: Negative<Finite<f64>>) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -39,7 +113,7 @@ pub(crate) mod piecewise {
         let nln = -ln;
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::E11),
             LessThan::new(18),
             ((Finite::new(2_f64) * *x) + Finite::new(5_f64)) / Finite::new(3_f64),
@@ -74,7 +148,7 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_10(x: NonZero<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_10(x: Negative<Finite<f64>>) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -83,7 +157,7 @@ pub(crate) mod piecewise {
         let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE11),
             LessThan::new(38),
             (Finite::new(20_f64) / *x) + One::ONE,
@@ -121,7 +195,7 @@ pub(crate) mod piecewise {
     /// return GSL_SUCCESS;
     /// ```
     #[inline]
-    pub(crate) fn le_neg_4(x: NonZero<Finite<f64>>) -> Approx {
+    pub(crate) fn le_neg_4(x: Negative<Finite<f64>>) -> Approx {
         #![expect(
             clippy::arithmetic_side_effects,
             reason = "property-based testing ensures this never happens"
@@ -130,7 +204,7 @@ pub(crate) mod piecewise {
         let s: Finite<f64> = (Finite::<f64>::ONE / *x) * (-*x).map(libm::exp);
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::AE12),
             LessThan::new(24),
             ((Finite::new(40_f64) / *x) + Finite::new(7_f64)) / Finite::new(3_f64),
@@ -140,11 +214,11 @@ pub(crate) mod piecewise {
         #[cfg(feature = "error")]
         let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
         #[cfg(feature = "error")]
-        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        let init_err = s * *cheb.error;
         #[cfg(feature = "error")]
         let two = NonNegative::new(Finite::new(2_f64));
         #[cfg(feature = "error")]
-        let init_err = s * *cheb.error;
+        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
         #[cfg(feature = "error")]
         let addl_err = two * epsilon * abs_value;
         Approx {
@@ -177,7 +251,7 @@ pub(crate) mod piecewise {
         let nln = -ln;
 
         let cheb = chebyshev::eval(
-            Sorted::new([Finite::new(-1_f64), Finite::new(1_f64)]),
+            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
             Finite::all(&constants::E12),
             LessThan::new(15),
             *x,
@@ -199,10 +273,129 @@ pub(crate) mod piecewise {
             error: init_err + addl_err,
         }
     }
+
+    /// Between +1 and +4.
+    /// # Original C code
+    /// ```c
+    /// const double s = 1.0/x * exp(-x);
+    /// gsl_sf_result result_c;
+    /// cheb_eval_e(&AE13_cs, (8.0/x-5.0)/3.0, &result_c);
+    /// result->val  = s * (1.0 + result_c.val);
+    /// result->err  = s * result_c.err;
+    /// result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
+    /// return GSL_SUCCESS;
+    /// ```
+    #[inline]
+    pub(crate) fn le_pos_4(x: Positive<Finite<f64>>) -> Approx {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        let s = (Finite::<f64>::ONE / *x) * (-*x).map(f64::exp);
+
+        let cheb = chebyshev::eval(
+            Sorted::new([Finite::new(-1_f64), Finite::ONE]),
+            Finite::all(&constants::AE13),
+            LessThan::new(24),
+            (Finite::new(8_f64) / *x - Finite::new(5_f64)) / Finite::new(3_f64),
+        );
+
+        let value = s * (Finite::ONE + cheb.value);
+        #[cfg(feature = "error")]
+        let init_err = s * *cheb.error;
+        #[cfg(feature = "error")]
+        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+        #[cfg(feature = "error")]
+        let addl_err = NonNegative::new(Finite::new(2_f64))
+            * epsilon
+            * NonNegative::new(Finite::new(value.abs()));
+
+        Approx {
+            value,
+            #[cfg(feature = "error")]
+            error: NonNegative::new(init_err + *addl_err),
+        }
+    }
+}
+
+pub(crate) mod pos {
+    //! E1 for inputs greater than 0.
+
+    use {
+        crate::{Approx, constants, implementation::piecewise},
+        core::{cmp::Ordering, fmt, hint::unreachable_unchecked},
+        sigma_types::{Finite, Positive},
+    };
+
+    /// Argument too large (positive): maximum is `constants::XMAX`
+    pub(crate) struct HugeArgument(pub(crate) Positive<Finite<f64>>);
+
+    impl fmt::Display for HugeArgument {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let Self(ref arg) = *self;
+            write!(
+                f,
+                "Argument too large (positive): maximum is {}, but {arg} was supplied",
+                constants::XMAX,
+            )
+        }
+    }
+
+    /// See `implementation::E1` for the original C code,
+    /// since the original code isn't partitioned by sign.
+    /// # Errors
+    /// See `HugeArgument`.
+    #[inline]
+    #[expect(clippy::todo, reason = "TODO: REMOVE")]
+    #[cfg_attr(
+        not(test),
+        expect(clippy::single_call_fn, reason = "to mirror the C implementation")
+    )]
+    pub(crate) fn E1(x: Positive<Finite<f64>>) -> Result<Approx, HugeArgument> {
+        match (**x).partial_cmp(&4_f64) {
+            // = 4
+            Some(Ordering::Equal) => Ok(piecewise::le_pos_4(x)),
+            // (0, +4)
+            Some(Ordering::Less) => Ok(match (**x).partial_cmp(&1_f64) {
+                // (0, +1]
+                Some(Ordering::Less | Ordering::Equal) => piecewise::le_pos_1(x.also()),
+                // (+1, +\infty]
+                Some(Ordering::Greater) => piecewise::le_pos_4(x),
+                // SAFETY:
+                // absurd case, since `x` is finite
+                None => unsafe { unreachable_unchecked() },
+            }),
+            // (+4, +\infty)
+            Some(Ordering::Greater) => todo!(),
+            // SAFETY:
+            // absurd case, since `x` is finite
+            None => unsafe { unreachable_unchecked() },
+        }
+
+        /*
+        else if(x <= XMAX) {
+          const double s = 1.0/x * ( 0 ? 1.0 : exp(-x) );
+          gsl_sf_result result_c;
+          cheb_eval_e(&AE14_cs, 8.0/x-1.0, &result_c);
+          result->val  = s * (1.0 +  result_c.val);
+          result->err  = s * (GSL_DBL_EPSILON + result_c.err);
+          result->err += 2.0 * (x + 1.0) * GSL_DBL_EPSILON * fabs(result->val);
+          if(result->val == 0.0)
+            UNDERFLOW_ERROR(result);
+          else
+            return GSL_SUCCESS;
+        }
+        else {
+          UNDERFLOW_ERROR(result);
+        }
+        */
+    }
 }
 
 use {
-    crate::{Approx, Error, constants},
+    crate::{Approx, Error},
     core::{cmp::Ordering, hint::unreachable_unchecked},
     sigma_types::{Finite, NonZero},
 };
@@ -293,7 +486,6 @@ use {
 /// # Errors
 /// See `Error`.
 #[inline]
-#[expect(clippy::todo, reason = "TODO: REMOVE")]
 #[cfg_attr(
     not(test),
     expect(clippy::single_call_fn, reason = "to mirror the C implementation")
@@ -301,80 +493,15 @@ use {
 pub(crate) fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
     match (**x).partial_cmp(&0_f64) {
         // (-\infty, 0)
-        Some(Ordering::Less) => match (**x).partial_cmp(&-10_f64) {
-            // (-\infty, -10]
-            Some(Ordering::Less | Ordering::Equal) => match (**x).partial_cmp(&constants::NXMAX) {
-                // (-XMAX, -10]
-                Some(Ordering::Greater) => Ok(piecewise::le_neg_10(x)),
-                // (-\infty, -XMAX]
-                Some(Ordering::Less | Ordering::Equal) => {
-                    Err(Error::ArgumentTooNegative(x.get().get()))
-                }
-                // SAFETY:
-                // absurd case, since `x` is finite
-                None => unsafe { unreachable_unchecked() },
-            },
-            // (-10, 0)
-            Some(Ordering::Greater) => match (**x).partial_cmp(&-4_f64) {
-                // (-10, -4]
-                Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_neg_4(x)),
-                // (-4, 0)
-                Some(Ordering::Greater) => match (**x).partial_cmp(&-1_f64) {
-                    // (-4, -1]
-                    Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_neg_1(x)),
-                    // (-1, 0)
-                    Some(Ordering::Greater) => Ok(piecewise::le_pos_1(x)),
-                    // SAFETY:
-                    // absurd case, since `x` is finite
-                    None => unsafe { unreachable_unchecked() },
-                },
-                // SAFETY:
-                // absurd case, since `x` is finite
-                None => unsafe { unreachable_unchecked() },
-            },
-            // SAFETY:
-            // absurd case, since `x` is finite
-            None => unsafe { unreachable_unchecked() },
-        },
+        Some(Ordering::Less) => {
+            neg::E1(x.also()).map_err(|neg::HugeArgument(arg)| Error::ArgumentTooNegative(arg))
+        }
         // (0, +\infty)
-        Some(Ordering::Greater) => match (**x).partial_cmp(&1_f64) {
-            // (0, +1]
-            Some(Ordering::Less | Ordering::Equal) => Ok(piecewise::le_pos_1(x)),
-            // (+1, +\infty]
-            Some(Ordering::Greater) => todo!(),
-            // SAFETY:
-            // absurd case, since `x` is finite
-            None => unsafe { unreachable_unchecked() },
-        },
+        Some(Ordering::Greater) => {
+            pos::E1(x.also()).map_err(|pos::HugeArgument(arg)| Error::ArgumentTooPositive(arg))
+        }
         // SAFETY:
         // absurd case, since `x` is finite and nonzero
         Some(Ordering::Equal) | None => unsafe { unreachable_unchecked() },
     }
-
-    /*
-    else if(x <= 4.0) {
-      const double s = 1.0/x * ( 0 ? 1.0 : exp(-x) );
-      gsl_sf_result result_c;
-      cheb_eval_e(&AE13_cs, (8.0/x-5.0)/3.0, &result_c);
-      result->val  = s * (1.0 + result_c.val);
-      result->err  = s * result_c.err;
-      result->err += 2.0 * GSL_DBL_EPSILON * fabs(result->val);
-      return GSL_SUCCESS;
-    }
-    else if(x <= XMAX || 0) {
-      const double s = 1.0/x * ( 0 ? 1.0 : exp(-x) );
-      gsl_sf_result result_c;
-      cheb_eval_e(&AE14_cs, 8.0/x-1.0, &result_c);
-      result->val  = s * (1.0 +  result_c.val);
-      result->err  = s * (GSL_DBL_EPSILON + result_c.err);
-      result->err += 2.0 * (x + 1.0) * GSL_DBL_EPSILON * fabs(result->val);
-      if(result->val == 0.0)
-        UNDERFLOW_ERROR(result);
-      else
-        return GSL_SUCCESS;
-    }
-    else {
-      UNDERFLOW_ERROR(result);
-    }
-    */
 }

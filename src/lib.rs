@@ -18,7 +18,7 @@ pub mod with_error;
 
 use {
     core::fmt,
-    sigma_types::{Finite, NonZero},
+    sigma_types::{Finite, Negative, NonZero, Positive},
 };
 
 #[cfg(feature = "error")]
@@ -67,7 +67,9 @@ impl fmt::Display for Approx {
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Error {
     /// Argument was less than the safe minimum.
-    ArgumentTooNegative(f64),
+    ArgumentTooNegative(Negative<Finite<f64>>),
+    /// Argument was less than the safe maximum.
+    ArgumentTooPositive(Positive<Finite<f64>>),
 }
 
 impl fmt::Display for Error {
@@ -76,8 +78,13 @@ impl fmt::Display for Error {
         match *self {
             Self::ArgumentTooNegative(arg) => write!(
                 f,
-                "Argument too negative: minimum is {}, but {arg} was supplied",
+                "Argument too large (negative): minimum is {}, but {arg} was supplied",
                 constants::NXMAX,
+            ),
+            Self::ArgumentTooPositive(arg) => write!(
+                f,
+                "Argument too large (positive): maximum is {}, but {arg} was supplied",
+                constants::XMAX,
             ),
         }
     }

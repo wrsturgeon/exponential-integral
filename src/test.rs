@@ -28,16 +28,29 @@ mod doesnt_crash {
 
     mod implementation {
 
+        mod neg {
+            use {
+                crate::implementation::neg::*,
+                quickcheck_macros::quickcheck,
+                sigma_types::{Finite, Negative},
+            };
+
+            #[quickcheck]
+            fn e1(x: Negative<Finite<f64>>) {
+                _ = E1(x);
+            }
+        }
+
         mod piecewise {
             use {
                 crate::{constants, implementation::piecewise::*},
                 quickcheck::TestResult,
                 quickcheck_macros::quickcheck,
-                sigma_types::{Finite, NonZero},
+                sigma_types::{Finite, Negative, NonZero, Positive},
             };
 
             #[quickcheck]
-            fn neg_10(x: NonZero<Finite<f64>>) -> TestResult {
+            fn neg_10(x: Negative<Finite<f64>>) -> TestResult {
                 if **x < constants::NXMAX {
                     return TestResult::discard();
                 }
@@ -49,7 +62,7 @@ mod doesnt_crash {
             }
 
             #[quickcheck]
-            fn neg_4(x: NonZero<Finite<f64>>) -> TestResult {
+            fn neg_4(x: Negative<Finite<f64>>) -> TestResult {
                 if **x <= -10_f64 {
                     return TestResult::discard();
                 }
@@ -61,7 +74,7 @@ mod doesnt_crash {
             }
 
             #[quickcheck]
-            fn neg_1(x: NonZero<Finite<f64>>) -> TestResult {
+            fn neg_1(x: Negative<Finite<f64>>) -> TestResult {
                 if **x <= -4_f64 {
                     return TestResult::discard();
                 }
@@ -82,6 +95,31 @@ mod doesnt_crash {
                 }
                 _ = le_pos_1(x);
                 TestResult::passed()
+            }
+
+            #[quickcheck]
+            fn pos_4(x: Positive<Finite<f64>>) -> TestResult {
+                if **x <= 1_f64 {
+                    return TestResult::discard();
+                }
+                if **x > 4_f64 {
+                    return TestResult::discard();
+                }
+                _ = le_pos_4(x);
+                TestResult::passed()
+            }
+        }
+
+        mod pos {
+            use {
+                crate::implementation::pos::*,
+                quickcheck_macros::quickcheck,
+                sigma_types::{Finite, Positive},
+            };
+
+            #[quickcheck]
+            fn e1(x: Positive<Finite<f64>>) {
+                _ = E1(x);
             }
         }
 
