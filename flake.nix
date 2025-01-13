@@ -74,17 +74,17 @@
             features = [
               "quickcheck"
             ];
-            git = "https://github.com/wrsturgeon/sigma-types.git";
+            # git = "https://github.com/wrsturgeon/sigma-types.git";
           };
         };
         dev-dependencies = {
           quickcheck = {
             features = [ ];
-            git = "https://github.com/neithernut/quickcheck.git";
+            # git = "https://github.com/neithernut/quickcheck.git";
           };
           quickcheck_macros = {
             features = [ ];
-            git = "https://github.com/neithernut/quickcheck.git";
+            # git = "https://github.com/neithernut/quickcheck.git";
           };
         };
         features = {

@@ -14,12 +14,12 @@ categories = [ "data-structures", "development-tools", "mathematics", "no-std", 
 
 [dependencies]
 libm = { version = "=0.2.11", default-features = false, features = [  ] }
-sigma-types = { default-features = false, features = [ "quickcheck" ], git = "https://github.com/wrsturgeon/sigma-types.git" }
+sigma-types = { version = "=0.2.8", default-features = false, features = [ "quickcheck" ] }
 
 
 [dev-dependencies]
-quickcheck = { default-features = false, features = [  ], git = "https://github.com/neithernut/quickcheck.git" }
-quickcheck_macros = { default-features = false, features = [  ], git = "https://github.com/neithernut/quickcheck.git" }
+quickcheck = { version = "=1.0.3", default-features = false, features = [  ] }
+quickcheck_macros = { version = "=1.0.0", default-features = false, features = [  ] }
 
 [features]
 error = [  ]
