@@ -11,6 +11,138 @@ pub mod chebyshev;
 mod constants;
 mod implementation;
 
+pub mod neg {
+    //! Inputs less than 0.
+
+    use {
+        crate::{Approx, constants, implementation::neg, pos},
+        core::fmt,
+        sigma_types::{Finite, Negative},
+    };
+
+    /// Argument too large (negative): minimum is `constants::NXMAX`, just under -710.
+    #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+    pub struct HugeArgument(pub(crate) Negative<Finite<f64>>);
+
+    impl fmt::Display for HugeArgument {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let Self(ref arg) = *self;
+            write!(
+                f,
+                "Argument too large (negative): minimum is {}, but {arg} was supplied",
+                constants::NXMAX,
+            )
+        }
+    }
+
+    /// E1 on inputs less than 0.
+    /// # Errors
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
+    #[inline]
+    pub fn E1(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
+        neg::E1(
+            x,
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+    }
+
+    /// Ei on inputs less than 0.
+    /// # Errors
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
+    #[inline(always)]
+    pub fn Ei(
+        x: Negative<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        pos::E1(
+            -x,
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+        .map(|mut approx| {
+            approx.value = -approx.value;
+            approx
+        })
+        .map_err(|pos::HugeArgument(arg)| HugeArgument(-arg))
+    }
+}
+
+pub mod pos {
+    //! Inputs greater than 0.
+
+    use {
+        crate::{Approx, constants, implementation::pos, neg},
+        core::fmt,
+        sigma_types::{Finite, Positive},
+    };
+
+    /// Argument too large (positive): maximum is `constants::XMAX`, just over 710.
+    #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+    pub struct HugeArgument(pub(crate) Positive<Finite<f64>>);
+
+    impl fmt::Display for HugeArgument {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let Self(ref arg) = *self;
+            write!(
+                f,
+                "Argument too large (positive): maximum is {}, but {arg} was supplied",
+                constants::XMAX,
+            )
+        }
+    }
+
+    /// E1 on inputs less than 0.
+    /// # Errors
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
+    #[inline]
+    pub fn E1(
+        x: Positive<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
+        pos::E1(
+            x,
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+    }
+
+    /// Ei on inputs less than 0.
+    /// # Errors
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
+    #[inline(always)]
+    pub fn Ei(
+        x: Positive<Finite<f64>>,
+        #[cfg(feature = "precision")] max_precision: usize,
+    ) -> Result<Approx, HugeArgument> {
+        #![expect(
+            clippy::arithmetic_side_effects,
+            reason = "property-based testing ensures this never happens"
+        )]
+
+        neg::E1(
+            -x,
+            #[cfg(feature = "precision")]
+            max_precision,
+        )
+        .map(|mut approx| {
+            approx.value = -approx.value;
+            approx
+        })
+        .map_err(|neg::HugeArgument(arg)| HugeArgument(-arg))
+    }
+}
+
 #[cfg(test)]
 mod test;
 
@@ -74,16 +206,8 @@ impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Self::ArgumentTooNegative(arg) => write!(
-                f,
-                "Argument too large (negative): minimum is {}, but {arg} was supplied",
-                constants::NXMAX,
-            ),
-            Self::ArgumentTooPositive(arg) => write!(
-                f,
-                "Argument too large (positive): maximum is {}, but {arg} was supplied",
-                constants::XMAX,
-            ),
+            Self::ArgumentTooNegative(arg) => fmt::Display::fmt(&neg::HugeArgument(arg), f),
+            Self::ArgumentTooPositive(arg) => fmt::Display::fmt(&pos::HugeArgument(arg), f),
         }
     }
 }
@@ -97,7 +221,7 @@ impl fmt::Display for Error {
 /// ```
 ///
 /// # Errors
-/// See `Error`.
+/// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
 #[inline]
 pub fn E1(
     x: NonZero<Finite<f64>>,
@@ -125,7 +249,7 @@ pub fn E1(
 /// ```
 ///
 /// # Errors
-/// See `Error`.
+/// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
 #[inline(always)]
 pub fn Ei(
     x: NonZero<Finite<f64>>,

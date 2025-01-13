@@ -4,35 +4,16 @@ pub(crate) mod neg {
     //! E1 for inputs less than 0.
 
     use {
-        crate::{Approx, constants, implementation::piecewise},
-        core::{cmp::Ordering, fmt, hint::unreachable_unchecked},
+        crate::{Approx, constants, implementation::piecewise, neg::HugeArgument},
+        core::{cmp::Ordering, hint::unreachable_unchecked},
         sigma_types::{Finite, Negative},
     };
-
-    /// Argument too large (negative): minimum is `constants::NXMAX`
-    pub(crate) struct HugeArgument(pub(crate) Negative<Finite<f64>>);
-
-    impl fmt::Display for HugeArgument {
-        #[inline]
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let Self(ref arg) = *self;
-            write!(
-                f,
-                "Argument too large (negative): minimum is {}, but {arg} was supplied",
-                constants::NXMAX,
-            )
-        }
-    }
 
     /// See `implementation::E1` for the original C code,
     /// since the original code isn't partitioned by sign.
     /// # Errors
-    /// See `HugeArgument`.
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
     #[inline]
-    #[cfg_attr(
-        not(test),
-        expect(clippy::single_call_fn, reason = "to mirror the C implementation")
-    )]
     pub(crate) fn E1(
         x: Negative<Finite<f64>>,
         #[cfg(feature = "precision")] max_precision: usize,
@@ -413,35 +394,16 @@ pub(crate) mod pos {
     //! E1 for inputs greater than 0.
 
     use {
-        crate::{Approx, constants, implementation::piecewise},
-        core::{cmp::Ordering, fmt, hint::unreachable_unchecked},
+        crate::{Approx, constants, implementation::piecewise, pos::HugeArgument},
+        core::{cmp::Ordering, hint::unreachable_unchecked},
         sigma_types::{Finite, Positive},
     };
-
-    /// Argument too large (positive): maximum is `constants::XMAX`
-    pub(crate) struct HugeArgument(pub(crate) Positive<Finite<f64>>);
-
-    impl fmt::Display for HugeArgument {
-        #[inline]
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let Self(ref arg) = *self;
-            write!(
-                f,
-                "Argument too large (positive): maximum is {}, but {arg} was supplied",
-                constants::XMAX,
-            )
-        }
-    }
 
     /// See `implementation::E1` for the original C code,
     /// since the original code isn't partitioned by sign.
     /// # Errors
-    /// See `HugeArgument`.
+    /// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
     #[inline]
-    #[cfg_attr(
-        not(test),
-        expect(clippy::single_call_fn, reason = "to mirror the C implementation")
-    )]
     pub(crate) fn E1(
         x: Positive<Finite<f64>>,
         #[cfg(feature = "precision")] max_precision: usize,
@@ -496,6 +458,8 @@ use {
     sigma_types::{Finite, NonZero},
 };
 
+/// # Errors
+/// If `x` is so large that floating-point operations will fail down the line (absolute value of just over 710).
 /// # Original C code
 /// Note that `scale` is pinned to `0`.
 /// ```c
@@ -586,6 +550,7 @@ use {
     not(test),
     expect(clippy::single_call_fn, reason = "to mirror the C implementation")
 )]
+#[expect(clippy::absolute_paths, reason = "always a collision except full path")]
 pub(crate) fn E1(
     x: NonZero<Finite<f64>>,
     #[cfg(feature = "precision")] max_precision: usize,
@@ -597,14 +562,14 @@ pub(crate) fn E1(
             #[cfg(feature = "precision")]
             max_precision,
         )
-        .map_err(|neg::HugeArgument(arg)| Error::ArgumentTooNegative(arg)),
+        .map_err(|crate::neg::HugeArgument(arg)| Error::ArgumentTooNegative(arg)),
         // (0, +\infty)
         Some(Ordering::Greater) => pos::E1(
             x.also(),
             #[cfg(feature = "precision")]
             max_precision,
         )
-        .map_err(|pos::HugeArgument(arg)| Error::ArgumentTooPositive(arg)),
+        .map_err(|crate::pos::HugeArgument(arg)| Error::ArgumentTooPositive(arg)),
         // SAFETY:
         // absurd case: `x` is finite and nonzero
         Some(Ordering::Equal) | None => unsafe { unreachable_unchecked() },
