@@ -14,8 +14,6 @@ mod implementation;
 #[cfg(test)]
 mod test;
 
-pub mod with_error;
-
 use {
     core::fmt,
     sigma_types::{Finite, Negative, NonZero, Positive},
@@ -90,27 +88,46 @@ impl fmt::Display for Error {
     }
 }
 
-/// Original C code:
+/// # Original C code
 /// ```c
-/// #define EVAL_RESULT(fn) \
-///    gsl_sf_result result; \
-///    int status = fn; \
-///    if (status != GSL_SUCCESS) { \
-///      GSL_ERROR_VAL(#fn, status, result.val); \
-///    } ; \
-///    return result.val;
-///
-/// // ...
-///
-/// double gsl_sf_expint_Ei(const double x)
+/// int gsl_sf_expint_E1_e(const double x, gsl_sf_result * result)
 /// {
-///   EVAL_RESULT(gsl_sf_expint_Ei_e(x, &result));
+///   return expint_E1_impl(x, result, 0);
+/// }
+/// ```
+///
+/// # Errors
+/// See `Error`.
+#[inline]
+pub fn E1(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
+    implementation::E1(x)
+}
+
+/// # Original C code
+/// ```c
+/// int gsl_sf_expint_Ei_e(const double x, gsl_sf_result * result)
+/// {
+///   /* CHECK_POINTER(result) */
+///
+///   {
+///     int status = gsl_sf_expint_E1_e(-x, result);
+///     result->val = -result->val;
+///     return status;
+///   }
 /// }
 /// ```
 ///
 /// # Errors
 /// See `Error`.
 #[inline(always)]
-pub fn Ei(x: NonZero<Finite<f64>>) -> Result<Finite<f64>, Error> {
-    with_error::Ei(x).map(|approx| approx.value)
+pub fn Ei(x: NonZero<Finite<f64>>) -> Result<Approx, Error> {
+    #![expect(
+        clippy::arithmetic_side_effects,
+        reason = "property-based testing ensures this never happens"
+    )]
+
+    E1(-x).map(|mut approx| {
+        approx.value = -approx.value;
+        approx
+    })
 }

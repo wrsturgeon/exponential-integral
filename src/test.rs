@@ -108,6 +108,18 @@ mod doesnt_crash {
                 _ = le_pos_4(x);
                 TestResult::passed()
             }
+
+            #[quickcheck]
+            fn pos_max(x: Positive<Finite<f64>>) -> TestResult {
+                if **x <= 4_f64 {
+                    return TestResult::discard();
+                }
+                if **x > constants::XMAX {
+                    return TestResult::discard();
+                }
+                _ = le_pos_max(x);
+                TestResult::passed()
+            }
         }
 
         mod pos {
@@ -135,32 +147,30 @@ mod doesnt_crash {
         }
     }
 
-    mod with_error {
-        use {
-            crate::with_error::*,
-            quickcheck_macros::quickcheck,
-            sigma_types::{Finite, NonZero},
-        };
-
-        #[quickcheck]
-        fn e1(x: NonZero<Finite<f64>>) {
-            _ = E1(x);
-        }
-
-        #[quickcheck]
-        fn ei(x: NonZero<Finite<f64>>) {
-            _ = Ei(x);
-        }
-    }
-
     use {
-        crate::Ei,
+        crate::{E1, Ei},
+        quickcheck::TestResult,
         quickcheck_macros::quickcheck,
         sigma_types::{Finite, NonZero},
     };
 
     #[quickcheck]
+    fn e1(x: NonZero<Finite<f64>>) {
+        _ = E1(x);
+    }
+
+    #[quickcheck]
     fn ei(x: NonZero<Finite<f64>>) {
         _ = Ei(x);
+    }
+
+    #[quickcheck]
+    fn ei_near_zero(x: NonZero<Finite<f64>>) -> TestResult {
+        let Some(smaller) = Finite::try_new(**x / 1_000_000_000_000_f64).and_then(NonZero::try_new)
+        else {
+            return TestResult::discard();
+        };
+        _ = Ei(smaller);
+        TestResult::passed()
     }
 }

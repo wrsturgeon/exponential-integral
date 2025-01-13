@@ -12,7 +12,7 @@
 )]
 
 use {
-    exponential_integral::with_error::Ei,
+    exponential_integral::Ei,
     quickcheck::{Arbitrary as _, Gen},
     sigma_types::{Finite, NonZero},
 };
