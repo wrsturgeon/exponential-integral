@@ -26,7 +26,7 @@
       system:
       let
         pname = "exponential-integral";
-        version = "0.2.0";
+        version = "0.2.1";
         synopsis = "The exponential integral function, a.k.a. Ei.";
         description = synopsis;
         src = nix-filter {
