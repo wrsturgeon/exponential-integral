@@ -10,7 +10,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "exponential-integral"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "libm",
  "quickcheck",
@@ -99,9 +99,9 @@ dependencies = [
 
 [[package]]
 name = "sigma-types"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9112e7fdef443c0807504e61941cc8d94e63ae4579e4a8a3c0e50ec911d884ab"
+checksum = "c595c8a400896ec768a81b330ac6a8e4c23c5965d40aeecc37e7d616b7148210"
 dependencies = [
  "quickcheck",
 ]
