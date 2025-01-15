@@ -99,9 +99,9 @@ dependencies = [
 
 [[package]]
 name = "sigma-types"
-version = "0.2.9"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99522d183b347b367d4419ef29c83f784353a696deac871db6e4251650d19308"
+checksum = "9112e7fdef443c0807504e61941cc8d94e63ae4579e4a8a3c0e50ec911d884ab"
 dependencies = [
  "quickcheck",
 ]

@@ -185,7 +185,7 @@
                   if attrs ? git then
                     ""
                   else
-                    "version = \"${if builtins.hasAttr pkg dependency-versions then "=${dependency-versions.${pkg}}" else "*"}\", "
+                    "version = \"${if builtins.hasAttr pkg dependency-versions then dependency-versions.${pkg} else "*"}\", "
                 }default-features = false, features = [ ${
                   pkgs.lib.strings.concatStringsSep ", " (builtins.map (feature: "\"${feature}\"") attrs.features)
                 } ]${if attrs ? git then ", git = \"${attrs.git}\"" else ""} }"
@@ -200,7 +200,7 @@
                   if attrs ? git then
                     ""
                   else
-                    "version = \"${if builtins.hasAttr pkg dependency-versions then "=${dependency-versions.${pkg}}" else "*"}\", "
+                    "version = \"${if builtins.hasAttr pkg dependency-versions then dependency-versions.${pkg} else "*"}\", "
                 }default-features = false, features = [ ${
                   pkgs.lib.strings.concatStringsSep ", " (builtins.map (feature: "\"${feature}\"") attrs.features)
                 } ]${if attrs ? git then ", git = \"${attrs.git}\"" else ""}, optional = true }"
@@ -216,7 +216,7 @@
                   if attrs ? git then
                     ""
                   else
-                    "version = \"${if builtins.hasAttr pkg dependency-versions then "=${dependency-versions.${pkg}}" else "*"}\", "
+                    "version = \"${if builtins.hasAttr pkg dependency-versions then dependency-versions.${pkg} else "*"}\", "
                 }default-features = false, features = [ ${
                   pkgs.lib.strings.concatStringsSep ", " (builtins.map (feature: "\"${feature}\"") attrs.features)
                 } ]${if attrs ? git then ", git = \"${attrs.git}\"" else ""} }"

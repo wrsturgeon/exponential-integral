@@ -13,13 +13,13 @@ keywords = [ "no_std", "no-std", "testing", "math", "mathematics" ]
 categories = [ "data-structures", "development-tools", "mathematics", "no-std", "no-std::no-alloc" ]
 
 [dependencies]
-libm = { version = "=0.2.11", default-features = false, features = [  ] }
-sigma-types = { version = "=0.2.9", default-features = false, features = [ "quickcheck" ] }
+libm = { version = "0.2.11", default-features = false, features = [  ] }
+sigma-types = { version = "0.3.1", default-features = false, features = [ "quickcheck" ] }
 
 
 [dev-dependencies]
-quickcheck = { version = "=1.0.3", default-features = false, features = [  ] }
-quickcheck_macros = { version = "=1.0.0", default-features = false, features = [  ] }
+quickcheck = { version = "1.0.3", default-features = false, features = [  ] }
+quickcheck_macros = { version = "1.0.0", default-features = false, features = [  ] }
 
 [features]
 error = [  ]
