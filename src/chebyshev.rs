@@ -2,7 +2,7 @@
 
 use {
     crate::Approx,
-    sigma_types::{Finite, Zero as _, less_than::usize::LessThan},
+    sigma_types::{Finite, Zero as _, usize::LessThan},
 };
 
 #[cfg(feature = "error")]
@@ -99,9 +99,9 @@ pub fn eval<const N_COEFFICIENTS: usize>(
             d = ((two_x * d) - dd) + coefficient;
             #[cfg(feature = "error")]
             {
-                e += NonNegative::new((two_x * tmp).map(f64::abs))
-                    + NonNegative::new(dd.map(f64::abs))
-                    + NonNegative::new(coefficient.map(f64::abs));
+                e += NonNegative::<Finite<f64>>::new((two_x * tmp).map(f64::abs))
+                    + NonNegative::<Finite<f64>>::new(dd.map(f64::abs))
+                    + NonNegative::<Finite<f64>>::new(coefficient.map(f64::abs));
             }
             dd = tmp;
 
@@ -119,9 +119,9 @@ pub fn eval<const N_COEFFICIENTS: usize>(
         d = x * d - dd + half_coefficient;
         #[cfg(feature = "error")]
         {
-            e += NonNegative::new((x * tmp).map(f64::abs))
-                + NonNegative::new(dd.map(f64::abs))
-                + NonNegative::new(half_coefficient.map(f64::abs));
+            e += NonNegative::<Finite<f64>>::new((x * tmp).map(f64::abs))
+                + NonNegative::<Finite<f64>>::new(dd.map(f64::abs))
+                + NonNegative::<Finite<f64>>::new(half_coefficient.map(f64::abs));
         }
     }
 

@@ -86,14 +86,14 @@ pub(crate) mod piecewise {
 
     use {
         crate::{Approx, chebyshev, constants},
-        sigma_types::{Finite, Negative, NonZero, One, Positive},
+        sigma_types::{Finite, Negative, NonZero, One as _, Positive},
     };
 
     #[cfg(feature = "error")]
     use sigma_types::NonNegative;
 
     #[cfg(feature = "precision")]
-    use sigma_types::less_than::usize::LessThan;
+    use sigma_types::usize::LessThan;
 
     /// Between -4 and -1.
     /// # Original C code
@@ -169,24 +169,22 @@ pub(crate) mod piecewise {
 
         let cheb = chebyshev::eval(
             Finite::all(&constants::AE11),
-            (Finite::new(20_f64) / *x) + One::ONE,
+            (Finite::new(20_f64) / *x) + Finite::<f64>::ONE,
             #[cfg(feature = "precision")]
             LessThan::new(max_precision.min(const { constants::size::AE11 - 1 })),
         );
 
-        let value = s * (Finite::ONE + cheb.value);
-        #[cfg(feature = "error")]
-        let abs_x: NonNegative<Finite<f64>> = x.map(|f| f.map(f64::abs));
-        #[cfg(feature = "error")]
-        let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
-        #[cfg(feature = "error")]
-        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
-        #[cfg(feature = "error")]
-        let two = NonNegative::new(Finite::new(2_f64));
+        let value = s * (Finite::<f64>::ONE + cheb.value);
         #[cfg(feature = "error")]
         let init_err = s * *cheb.error;
         #[cfg(feature = "error")]
-        let addl_err = two * epsilon * (abs_x + One::ONE) * abs_value;
+        let addl_err = {
+            let abs_x: NonNegative<Finite<f64>> = x.map(|f| f.map(f64::abs));
+            let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+            let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+            let two = NonNegative::new(Finite::new(2_f64));
+            two * epsilon * (abs_x + NonNegative::<Finite<f64>>::ONE) * abs_value
+        };
         Approx {
             value,
             #[cfg(feature = "error")]
@@ -224,17 +222,16 @@ pub(crate) mod piecewise {
             LessThan::new(max_precision.min(const { constants::size::AE12 - 1 })),
         );
 
-        let value = s * (Finite::ONE + cheb.value);
-        #[cfg(feature = "error")]
-        let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+        let value = s * (Finite::<f64>::ONE + cheb.value);
         #[cfg(feature = "error")]
         let init_err = s * *cheb.error;
         #[cfg(feature = "error")]
-        let two = NonNegative::new(Finite::new(2_f64));
-        #[cfg(feature = "error")]
-        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
-        #[cfg(feature = "error")]
-        let addl_err = two * epsilon * abs_value;
+        let addl_err = {
+            let abs_value: NonNegative<Finite<f64>> = NonNegative::new(value.map(f64::abs));
+            let two = NonNegative::new(Finite::new(2_f64));
+            let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+            two * epsilon * abs_value
+        };
         Approx {
             value,
             #[cfg(feature = "error")]
@@ -321,15 +318,16 @@ pub(crate) mod piecewise {
             LessThan::new(max_precision.min(const { constants::size::AE13 - 1 })),
         );
 
-        let value = s * (Finite::ONE + cheb.value);
+        let value = s * (Finite::<f64>::ONE + cheb.value);
         #[cfg(feature = "error")]
         let init_err = s * *cheb.error;
         #[cfg(feature = "error")]
-        let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
-        #[cfg(feature = "error")]
-        let addl_err = NonNegative::new(Finite::new(2_f64))
-            * epsilon
-            * NonNegative::new(Finite::new(value.abs()));
+        let addl_err = {
+            let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
+            NonNegative::new(Finite::new(2_f64))
+                * epsilon
+                * NonNegative::new(Finite::new(value.abs()))
+        };
 
         Approx {
             value,
@@ -371,16 +369,19 @@ pub(crate) mod piecewise {
             LessThan::new(max_precision.min(const { constants::size::AE14 - 1 })),
         );
 
-        let value = s * (Finite::ONE + cheb.value);
+        let value = s * (Finite::<f64>::ONE + cheb.value);
         #[cfg(feature = "error")]
         let epsilon = NonNegative::new(Finite::new(constants::GSL_DBL_EPSILON));
         #[cfg(feature = "error")]
         let init_err = s * *(epsilon + cheb.error);
         #[cfg(feature = "error")]
-        let addl_err = NonNegative::new(Finite::new(2_f64))
-            * (x.also() + NonNegative::new(Finite::new(1_f64)))
-            * epsilon
-            * NonNegative::new(Finite::new(value.abs()));
+        let addl_err = {
+            let also_x: NonNegative<Finite<f64>> = x.also();
+            NonNegative::new(Finite::new(2_f64))
+                * (also_x + NonNegative::new(Finite::new(1_f64)))
+                * epsilon
+                * NonNegative::new(Finite::new(value.abs()))
+        };
 
         Approx {
             value,

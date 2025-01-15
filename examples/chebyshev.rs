@@ -17,7 +17,7 @@ use {
 };
 
 #[cfg(feature = "precision")]
-use sigma_types::less_than::usize::LessThan;
+use sigma_types::usize::LessThan;
 
 fn main() {
     const N: usize = 8;
