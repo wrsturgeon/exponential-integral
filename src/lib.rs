@@ -21,8 +21,9 @@ pub mod neg {
     };
 
     /// Argument too large (negative): minimum is `constants::NXMAX`, just under -710.
+    #[non_exhaustive]
     #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-    pub struct HugeArgument(pub(crate) Negative<Finite<f64>>);
+    pub struct HugeArgument(pub Negative<Finite<f64>>);
 
     impl fmt::Display for HugeArgument {
         #[inline]
@@ -87,8 +88,9 @@ pub mod pos {
     };
 
     /// Argument too large (positive): maximum is `constants::XMAX`, just over 710.
+    #[non_exhaustive]
     #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
-    pub struct HugeArgument(pub(crate) Positive<Finite<f64>>);
+    pub struct HugeArgument(pub Positive<Finite<f64>>);
 
     impl fmt::Display for HugeArgument {
         #[inline]
